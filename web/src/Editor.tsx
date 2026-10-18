@@ -44,6 +44,18 @@ function serialize(root: HTMLElement) {
   return { html: clone.innerHTML, blocks, text, empty: !text.trim() && !hasImg };
 }
 
+// Move loose leading text into its own <div> so the title styling hits the real first line.
+function wrapFirstLine(root: HTMLElement) {
+  const first = root.firstChild;
+  if (!first || (first instanceof Element && first.tagName === "DIV")) return;
+  const div = document.createElement("div");
+  while (root.firstChild && !(root.firstChild instanceof Element && /^(DIV|P|BR)$/.test(root.firstChild.tagName))) {
+    div.appendChild(root.firstChild);
+  }
+  if (root.firstChild instanceof Element && root.firstChild.tagName === "BR") root.firstChild.remove();
+  if (div.childNodes.length) root.insertBefore(div, root.firstChild);
+}
+
 export default function Editor({ noteId, uid, onChanged, onDeleted, onOpenTopic }: Props) {
   const ref = useRef<HTMLDivElement>(null);
   const idRef = useRef<string | null>(noteId);
@@ -67,6 +79,7 @@ export default function Editor({ noteId, uid, onChanged, onDeleted, onOpenTopic 
       if (!alive || !data || !ref.current) return;
       rowRef.current = data as NoteRow;
       ref.current.innerHTML = data.html;
+      wrapFirstLine(ref.current);
       resetEmpty();
       await hydrateImages();
       setLoaded(true);
